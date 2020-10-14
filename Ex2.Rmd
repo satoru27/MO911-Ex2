@@ -1,7 +1,7 @@
 ---
 title: "MO911A -- Resolução do Exercício 2"
 author: "Décio Luiz Gazzoni Filho (RA264965), Vitor Satoru Machi Matsumine (RA264962)"
-date: "09/10/2020"
+date: ""
 output: pdf_document
 ---
 
@@ -10,33 +10,37 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
+## Intervalo de confiança
+
+Inicialmente importou-se os dados do arquivo `.csv` fornecido, que foram categorizados (como diabético ou não) para posterior análise.
+
 ```{r}
-# Leitura de dados
 mydata = read.csv("ex1.csv")
 mydata$type <- as.factor(mydata$type)
 ```
 
+Os dados foram separados em duas variáveis `data_yes` e `data_no`, referindo-se a pacientes diabéticos ou não.
 
 ```{r}
-# separação dos dados entre pacientes com diabetes e sem diabetes
 data_yes = mydata$bp[mydata$type == "Yes"]
 data_no = mydata$bp[mydata$type == "No"]
 ```
 
+Na sequência, foram calculados os intervalos de confiança de cada conjunto de dados usando cada um dos métodos solicitados. Inicialmente, temos o teste $t$:
 
 ```{r}
-# intervalo de confiança usando o teste t
-t.test(data_yes)$conf.int
-t.test(data_no)$conf.int
+(t.ci.yes = t.test(data_yes)$conf.int[1:2])
+(t.ci.no = t.test(data_no)$conf.int[1:2])
 ```
 
+Em seguida, para o teste Wilcoxon rank-sum:
 
 ```{r}
-# intervalo de confiança usando o teste de wilcox
-wilcox.test(data_yes,conf.int=T)$conf.int
-wilcox.test(data_no,conf.int=T)$conf.int
+(w.ci.yes = wilcox.test(data_yes,conf.int=TRUE)$conf.int[1:2])
+(w.ci.no = wilcox.test(data_no,conf.int=TRUE)$conf.int[1:2])
 ```
 
+Por fim, usou-se o método bootstrap. Para tanto, é necessário importar uma biblioteca e definir uma função para cálculo da média:
 
 ```{r}
 # requisitos do bootstrap
@@ -46,80 +50,82 @@ auxf <- function(dado,indice){
 }
 ```
 
+Calculando então o intervalo de confiança pelo método bootstrap, primeiro para pacientes diabéticos:
 
 ```{r}
 # calculo do CI para pacientes diabeticos por meio do bootstrap
 bb_yes = boot(data_yes,R=5000, statistic=auxf)
-boot.ci(bb_yes,type="bca")
+(b.yes.ci = boot.ci(bb_yes,type="bca")$bca[1,4:5])
 ```
 
+Repetindo o cálculo para pacientes não-diabéticos:
 
 ```{r}
 # calculo do CI para pacientes nao diabeticos por meio do bootstrap
 bb_no = boot(data_no,R=5000, statistic=auxf)
-boot.ci(bb_no,type="bca")
+(b.no.ci = boot.ci(bb_no,type="bca")$bca[1,4:5])
+```
+
+Para melhor visualização, será construída uma tabela para comparação desses valores. Inicialmente os resultados são armazenados no mesmo array dos demais resultados:
+
+Temos então a tabela comparativa dos intervalos de confiança:
+
+```{r echo=FALSE}
+library(knitr)
+rownames <- c("Diabéticos", "Não-diabéticos")
+colnames <- c("Teste $t$", "Wilcoxon", "Bootstrap")
+ci <- array("", dim=c(2,3), dimnames = list(rownames,colnames))
+ci[1,1] = paste(format(t.ci.yes, nsmall=5), collapse=",")
+ci[2,1] = paste(format(t.ci.no, nsmall=5), collapse=",")
+ci[1,2] = paste(format(w.ci.yes, nsmall=5), collapse=",")
+ci[2,2] = paste(format(w.ci.no, nsmall=5), collapse=",")
+ci[1,3] = paste(format(b.yes.ci, nsmall=5), collapse=",")
+ci[2,3] = paste(format(b.no.ci, nsmall=5), collapse=",")
+kable(ci)
 ```
 
 
+## Interseção dos intervalos de confiança
+
+Tomando como exemplo o teste Wilcoxon rank-sum, repetimos os intervalos de confiança para referência:
 
 ```{r}
-# Interceção dos intervalos de confiança
-ci_boot_yes = boot.ci(bb_yes,type="bca")$bca[1,4:5]
-ci_boot_no = boot.ci(bb_no,type="bca")$bca[1,4:5]
-ci_boot_yes
-ci_boot_no
+w.ci.yes
+w.ci.no
 ```
 
-Há interceção ente os intervalos de confiança dos 2 conjuntos de dados? -> Não
+Observa-se que não há intersecção entre os dois intervalos de confiança (a média dos diabéticos é maior, e o limite inferior dos diabéticos é `r w.ci.yes[1]`, que é maior do que o limite superior dos não-diabéticos, que é `r w.ci.no[2]`).
 
+Espera-se, portanto, que o teste resulte em uma diferença estatisticamente significativa entre os dois conjuntos dos dados. Isso é verificado pela execução deste teste para os dois conjuntos de dados:
 
-Isso esta de acordo com o teste de diferença significativa entre eles? -> Sim (teste abaixo)
 ```{r}
-wilcox.test(data_yes, data_no)
+(w.test = wilcox.test(data_yes, data_no))
 ```
 
+De fato, $p = `r w.test$p.value` < 0.05$, e portanto a diferença é estatisticamente significativa, como esperado.
+
+
+## Tamanho de efeito
+
+Usando a biblioteca `effsize`, foi calculado o Cohen D com pooled standard deviation (usando o parâmetro `pooled=TRUE` da função `cohen.d`, conforme informado na documentação):
 
 ```{r}
-# Tamanho de efeito
-# Calcule o Cohen D com o pooled standard deviation para a diferença
-# entre a pressão sangüínea de pacientes com e sem diabetes.
-#
-# diferença das médias dividido pelo desvio padrão “dos dois conjuntos”
-# a media ponderada dos desvios padrão dos dois conjuntos. Essa abordagem
-# é chamada de pooled standard variation.
-
-
-mean_yes = mean(data_yes)
-sd_yes = sd(data_yes)
-
-mean_no = mean(data_no)
-sd_no = sd(data_no)
-
-# para o calculo do pooled standard deviation é utilizado a formula em
-# # https://www.statisticshowto.com/pooled-standard-deviation/
-
-pooled_sd = sqrt( ((length(data_yes)-1)*sd_yes^2 + (length(data_no)-1)*sd_no^2)/
-                    (length(data_yes) + length(data_no) - 2) )
-
-cohen_d = (mean_yes - mean_no) / pooled_sd
-cohen_d
-```
-
-
-```{r}
-# Intervalo de confiança para o tamanho de efeito
-#install.packages("effsize")
 library(effsize)
-cohen_d_new = cohen.d(data_yes, data_no, pooled=TRUE) 
-# fazendo pooled para comparar com o resultado anterior, ambos foram iguais
-
-cohen_d_new$conf.int
-
-# Isso resume tudo que é importante: se o intervalo de confiança cruza o 0
-# então tradicionalmente a diferença não é significativa.
-# (0.1503741, 0.7456945) -> o intervalo não cruza o 0 então ele é
-# estatisticamente significativo
-
+cohen_d_new = cohen.d(data_yes, data_no, pooled=TRUE)
+cohen_d_new$estimate
 ```
+
+O valor do Cohen D, portanto, é `r cohen_d_new$estimate`, o que indica um tamanho de efeito de pequeno a médio, conforme classificação de Cohen. Porém, conforme afirmado na aula, mesmo um efeito de 0.2 não pode ser considerado pequeno, a despeito de esta ser a classificação inicial proposta por Cohen.
+
+
+## Intervalo de confiança para o tamanho de efeito
+
+Do cálculo previamente realizado do Cohen D, pode-se extrair um intervalo de confiança:
+
+```{r}
+cohen_d_new$conf.int
+```
+
+Observa-se que esse intervalo de confiança não cruza o zero. Por este motivo, pode-se afirmar que há sim uma diferença significativa entre os dios conjuntos de dados.
 
 Usando o intervalo de confiança do Cohen D diga se a existe uma diferença significativa entre os dois conjuntos de dados -> existe diferença estatisticamente significativa

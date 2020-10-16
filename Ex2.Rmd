@@ -43,7 +43,6 @@ Em seguida, para o teste Wilcoxon rank-sum:
 Por fim, usou-se o método bootstrap. Para tanto, é necessário importar uma biblioteca e definir uma função para cálculo da média:
 
 ```{r}
-# requisitos do bootstrap
 library(boot)
 auxf <- function(dado,indice){
   return(mean(dado[indice]))
@@ -53,7 +52,6 @@ auxf <- function(dado,indice){
 Calculando então o intervalo de confiança pelo método bootstrap, primeiro para pacientes diabéticos:
 
 ```{r}
-# calculo do CI para pacientes diabeticos por meio do bootstrap
 bb_yes = boot(data_yes,R=5000, statistic=auxf)
 (b.yes.ci = boot.ci(bb_yes,type="bca")$bca[1,4:5])
 ```
@@ -61,14 +59,11 @@ bb_yes = boot(data_yes,R=5000, statistic=auxf)
 Repetindo o cálculo para pacientes não-diabéticos:
 
 ```{r}
-# calculo do CI para pacientes nao diabeticos por meio do bootstrap
 bb_no = boot(data_no,R=5000, statistic=auxf)
 (b.no.ci = boot.ci(bb_no,type="bca")$bca[1,4:5])
 ```
 
-Para melhor visualização, será construída uma tabela para comparação desses valores. Inicialmente os resultados são armazenados no mesmo array dos demais resultados:
-
-Temos então a tabela comparativa dos intervalos de confiança:
+Para melhor visualização,construiu-se uma tabela comparativa dos intervalos de confiança:
 
 ```{r echo=FALSE}
 library(knitr)
@@ -94,15 +89,15 @@ w.ci.yes
 w.ci.no
 ```
 
-Observa-se que não há intersecção entre os dois intervalos de confiança (a média dos diabéticos é maior, e o limite inferior dos diabéticos é `r w.ci.yes[1]`, que é maior do que o limite superior dos não-diabéticos, que é `r w.ci.no[2]`).
+Observa-se que não há intersecção entre os dois intervalos de confiança, uma vez que, a pressão média dos pacientes diabéticos (`r mean(data_yes)`) é maior do que a dos pacientes não diabéticos (`r mean(data_no)`) e o limite inferior de pressão dos pacientes diabéticos (`r w.ci.yes[1]`) é maior que o limite superior da pressão dos pacientes não-diabéticos (`r w.ci.no[2]`).
 
-Espera-se, portanto, que o teste resulte em uma diferença estatisticamente significativa entre os dois conjuntos dos dados. Isso é verificado pela execução deste teste para os dois conjuntos de dados:
+Espera-se, portanto, que o teste resulte em uma diferença estatisticamente significativa entre os dois conjuntos dos dados. Isso é verificado pela execução do teste de Wilcox para os dois conjuntos de dados:
 
 ```{r}
 (w.test = wilcox.test(data_yes, data_no))
 ```
 
-De fato, $p = `r w.test$p.value` < 0.05$, e portanto a diferença é estatisticamente significativa, como esperado.
+De fato, $p = `r w.test$p.value` < 0.05$, e portanto a diferença é estatisticamente significativa.
 
 
 ## Tamanho de efeito
@@ -111,11 +106,11 @@ Usando a biblioteca `effsize`, foi calculado o Cohen D com pooled standard devia
 
 ```{r}
 library(effsize)
-cohen_d_new = cohen.d(data_yes, data_no, pooled=TRUE)
-cohen_d_new$estimate
+cohen_d = cohen.d(data_yes, data_no, pooled=TRUE)
+cohen_d$estimate
 ```
 
-O valor do Cohen D, portanto, é `r cohen_d_new$estimate`, o que indica um tamanho de efeito de pequeno a médio, conforme classificação de Cohen. Porém, conforme afirmado na aula, mesmo um efeito de 0.2 não pode ser considerado pequeno, a despeito de esta ser a classificação inicial proposta por Cohen.
+O valor do Cohen D é `r cohen_d$estimate`, o que indica um tamanho de efeito de pequeno a médio, conforme classificação de Cohen. Porém, conforme afirmado na aula, mesmo um efeito de 0.2 não pode ser considerado pequeno, a despeito de esta ser a classificação inicial proposta por Cohen.
 
 
 ## Intervalo de confiança para o tamanho de efeito
@@ -123,9 +118,7 @@ O valor do Cohen D, portanto, é `r cohen_d_new$estimate`, o que indica um taman
 Do cálculo previamente realizado do Cohen D, pode-se extrair um intervalo de confiança:
 
 ```{r}
-cohen_d_new$conf.int
+cohen_d$conf.int
 ```
 
-Observa-se que esse intervalo de confiança não cruza o zero. Por este motivo, pode-se afirmar que há sim uma diferença significativa entre os dios conjuntos de dados.
-
-Usando o intervalo de confiança do Cohen D diga se a existe uma diferença significativa entre os dois conjuntos de dados -> existe diferença estatisticamente significativa
+Observa-se que esse intervalo de confiança não cruza o zero, portanto, pode-se afirmar que existe uma diferença significativa entre os dois conjuntos de dados.

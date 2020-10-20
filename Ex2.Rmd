@@ -121,4 +121,4 @@ Do cálculo previamente realizado do Cohen D, pode-se extrair um intervalo de co
 cohen_d$conf.int
 ```
 
-Observa-se que esse intervalo de confiança não cruza o zero, portanto, pode-se afirmar que existe uma diferença significativa entre os dois conjuntos de dados.
+Observa-se que esse intervalo de confiança não cruza o zero (haja visto que ambos os valores são positivos), portanto, pode-se afirmar que existe uma diferença significativa entre os dois conjuntos de dados.
